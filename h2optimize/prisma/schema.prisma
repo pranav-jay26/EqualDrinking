@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./h2optimize.db"
+}
+
+// Product model
+model Product {
+  id            String        @id @default(uuid())
+  name          String
+  brand         String
+  model         String
+  category      String
+  energyStar    Boolean       @default(false)
+  waterSense    Boolean       @default(false)
+  energyUse     Float?
+  waterUse      Float?
+  imageUrl      String?
+  efficiencyScore Int?
+  savingEstimate String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  priceListings PriceListing[]
+  savedBy       SavedProduct[]
+
+  @@unique([brand, model])
+  @@map("products")
+}
+
+// Price listing for products
+model PriceListing {
+  id         String   @id @default(uuid())
+  vendor     String
+  price      Float
+  url        String
+  lastUpdated DateTime @default(now())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("price_listings")
+}
+
+// User preferences and saved items
+model UserPreference {
+  id                String         @id @default(uuid())
+  userId            String         @unique
+  preferWaterEfficiency Boolean    @default(true)
+  preferEnergyEfficiency Boolean   @default(true)
+  priceRangeMin    Float          @default(0)
+  priceRangeMax    Float          @default(2000)
+  preferredVendors String?
+  savedProducts    SavedProduct[]
+  searchHistory    SearchHistory[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("user_preferences")
+}
+
+// Many-to-many relationship between users and saved products
+model SavedProduct {
+  id               String         @id @default(uuid())
+  userPreferenceId String
+  productId        String
+  savedAt          DateTime       @default(now())
+  userPreference   UserPreference @relation(fields: [userPreferenceId], references: [id], onDelete: Cascade)
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userPreferenceId, productId])
+  @@map("saved_products")
+}
+
+// Search history for users
+model SearchHistory {
+  id               String         @id @default(uuid())
+  userPreferenceId String
+  applianceType    String
+  applianceBrand   String?
+  applianceModel   String?
+  applianceYear    String?
+  resultCount      Int            @default(0)
+  searchDate       DateTime       @default(now())
+  userPreference   UserPreference @relation(fields: [userPreferenceId], references: [id], onDelete: Cascade)
+
+  @@map("search_history")
+}
